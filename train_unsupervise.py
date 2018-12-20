@@ -21,7 +21,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
 
 class Config(object):
     batch_size = 40
-    img_feat_dir = './feature'
+    img_feat_dir = './feature/flickr30k_img_bbx_ss_rpn_det'
     sen_dir = './annotation'
     train_file_list = 'flickr30k_train_val.lst'
     test_file_list = 'flickr30k_test.lst'

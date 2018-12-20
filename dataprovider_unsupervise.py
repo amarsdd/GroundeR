@@ -50,6 +50,9 @@ class dataprovider(object):
             sens = sen_feat['sens']
             sen_id = np.random.randint(len(pos_ind))
             # print img_id, sen_id
+            if (pos_ind[sen_id] + 1) > len(sens):
+                # print(img_id)
+                pos_ind[sen_id] = -1
             sen = sens[pos_ind[sen_id]]
             if len(sen) > self.phrase_len:
                 sen = sen[:self.phrase_len]
@@ -121,6 +124,9 @@ class dataprovider(object):
 
             sens = sen_feat['sens']
             for sen_ind in range(len(pos_ind)):
+                if (pos_ind[sen_ind] + 1) > len(sens):
+                    print(img_id)
+                    pos_ind[sen_ind] = -1
                 cur_sen = sens[pos_ind[sen_ind]]
                 sen_token = np.ones(self.phrase_len)*(self.vocab_size-1)
                 sen_token = sen_token.astype('int')

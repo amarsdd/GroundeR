@@ -3,11 +3,11 @@ import os, sys
 import numpy as np
 import time
 
-#Provides data in batches for training and reads test feat for test
+# Provides data in batches for training and reads test feat for test
 from dataprovider_unsupervise import dataprovider
-#Provides the model and loss functions for grouding algo
+# Provides the model and loss functions for grouding algo
 from model_unsupervise import ground_model
-#Utility functions to compute iou
+# Utility functions to compute iou
 from util.iou import calc_iou
 import argparse
 
@@ -19,6 +19,7 @@ args = parser.parse_args()
 
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
 
+
 class Config(object):
     batch_size = 40
     img_feat_dir = './feature'
@@ -27,30 +28,32 @@ class Config(object):
     test_file_list = 'flickr30k_test.lst'
     log_file = './log/ground_unsupervised'
     save_path = './model/ground_unsupervised'
-    vocab_size = 17150    
+    vocab_size = 17150
     num_epoch = 3
     max_step = 100000
-    optim='adam'
+    optim = 'adam'
     dropout = 0.5
     lr = 0.0001
-    phrase_len=5
-    weight_decay=0.0005
+    phrase_len = 5
+    weight_decay = 0.0005
     lstm_dim = 500
 
-#Generate the input data feed batches for train and test
+
+# Generate the input data feed batches for train and test
 def update_feed_dict(dataprovider, model, is_train):
     img_feat, sen_feat, enc_batch, dec_batch, mask_batch, bbx_label = dataprovider.get_next_batch()
     feed_dict = {
-                model.sen_data: sen_feat,
-                model.vis_data: img_feat,
-                model.bbx_label: bbx_label,
-                model.enc_data: enc_batch,
-                model.dec_data: dec_batch,
-                model.msk_data: mask_batch,
-                model.is_train: is_train}
+        model.sen_data: sen_feat,
+        model.vis_data: img_feat,
+        model.bbx_label: bbx_label,
+        model.enc_data: enc_batch,
+        model.dec_data: dec_batch,
+        model.msk_data: mask_batch,
+        model.is_train: is_train}
     return feed_dict
 
-#Evaluate the current batch of samples
+
+# Evaluate the current batch of samples
 def eval_cur_batch(gt_label, cur_logits, is_train=True, num_sample=0):
     res_prob = cur_logits
     res_label = np.argmax(res_prob, axis=1)
@@ -66,14 +69,16 @@ def eval_cur_batch(gt_label, cur_logits, is_train=True, num_sample=0):
         accu /= float(num_sample)
     return accu
 
-#Function to load train and test image lists
+
+# Function to load train and test image lists
 def load_img_id_list(file_list):
     img_list = []
     with open(file_list) as fin:
         for img_id in fin.readlines():
             img_list.append(int(img_id.strip()))
-    img_list = np.array(img_list).astype('int')    
+    img_list = np.array(img_list).astype('int')
     return img_list
+
 
 def run_eval(sess, dataprovider, model, eval_op, feed_dict):
     accu = 0.0
@@ -103,15 +108,17 @@ def run_eval(sess, dataprovider, model, eval_op, feed_dict):
             cur_att_logits = cur_att_logits[:num_sample]
             cur_accuracy = eval_cur_batch(bbx_gt_batch, cur_att_logits, False, num_sample_all)
 
-            print '%d/%d: %d/%d, %.4f'%(img_ind, len(dataprovider.test_list), num_sample, num_sample_all, cur_accuracy)
-            accu += cur_accuracy*num_sample_all
+            print '%d/%d: %d/%d, %.4f' % (
+            img_ind, len(dataprovider.test_list), num_sample, num_sample_all, cur_accuracy)
+            accu += cur_accuracy * num_sample_all
             num_cnt += float(num_sample_all)
         else:
-            print 'No gt for %d'%img_id
+            print 'No gt for %d' % img_id
 
     accu /= num_cnt
-    print 'Accuracy = %.4f'%(accu)
+    print 'Accuracy = %.4f' % (accu)
     return accu
+
 
 def run_evaluate():
     train_list = []
@@ -120,23 +127,23 @@ def run_evaluate():
     train_list = load_img_id_list(config.train_file_list)
     test_list = load_img_id_list(config.test_file_list)
 
-    #Directory to save model Info
+    # Directory to save model Info
     config.save_path = config.save_path + '_' + args.model_name
-    assert(os.path.isdir(config.save_path))
+    assert (os.path.isdir(config.save_path))
 
     restore_id = args.restore_id
-    assert(restore_id > 0)
+    assert (restore_id > 0)
 
-    #Initialize the paths and parameters for the current dataset
+    # Initialize the paths and parameters for the current dataset
     cur_dataset = dataprovider(train_list, test_list, config.img_feat_dir, config.sen_dir, config.vocab_size,
-                                phrase_len=config.phrase_len, batch_size=config.batch_size)
+                               phrase_len=config.phrase_len, batch_size=config.batch_size)
     is_train = False
-    #Initialize groundeR model train instance
+    # Initialize groundeR model train instance
     model = ground_model(is_train, config)
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.3)
 
     with tf.Graph().as_default():
-        #Build the model
+        # Build the model
         total_loss, train_op, att_logits, dec_logits = model.build_model()
         # Create a session for running Ops on the Graph.
         sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -145,10 +152,10 @@ def run_evaluate():
         sess.run(init)
         saver = tf.train.Saver(max_to_keep=100)
 
-        print 'Restore model_%d'%restore_id
+        print 'Restore model_%d' % restore_id
         cur_dataset.epoch_id = restore_id
         cur_dataset.is_save = False
-        saver.restore(sess, '%s/model_%d.ckpt'%(config.save_path, restore_id))
+        saver.restore(sess, '%s/model_%d.ckpt' % (config.save_path, restore_id))
 
         feed_dict = update_feed_dict(cur_dataset, model, is_train)
 
@@ -159,6 +166,7 @@ def run_evaluate():
 
 def main(_):
     run_evaluate()
+
 
 if __name__ == '__main__':
     tf.app.run()
